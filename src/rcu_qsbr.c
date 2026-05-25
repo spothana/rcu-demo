@@ -17,12 +17,11 @@
  * reference taken before start() was called -> safe to free.
  */
 #include "rcu_qsbr.h"
+#include "rcu_port.h"
 
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sched.h>
-#include <time.h>
 
 #define RCU_CACHE_LINE 64
 
@@ -158,10 +157,9 @@ int rcu_qsbr_check(struct rcu_qsbr *v, uint64_t token, bool wait)
         return 0;
 
     /* Block-poll with a tiny backoff until the grace period ends. */
-    const struct timespec nap = { 0, 100 * 1000 };  /* 100 us */
     while (!all_passed(v, token)) {
-        sched_yield();
-        nanosleep(&nap, NULL);
+        rcu_yield();
+        rcu_sleep_us(100);
     }
     return 1;
 }

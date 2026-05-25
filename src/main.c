@@ -18,14 +18,12 @@
  *   - demo_synchronize() shows the simple blocking rcu_qsbr_synchronize.
  */
 #include "rcu_qsbr.h"
+#include "rcu_port.h"
 
-#include <pthread.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-#include <unistd.h>
 
 #define NUM_READERS  4
 #define MAX_THREADS  16          /* sized generously for the QS var */
@@ -105,8 +103,7 @@ static void *reader_thread(void *arg)
     /* One reader demonstrates the offline path for blocking work. */
     if (id == 0) {
         rcu_qsbr_thread_offline(g_qsv, id);   /* writer skips us */
-        struct timespec nap = { 0, 1000 * 1000 };
-        nanosleep(&nap, NULL);                /* pretend: blocking I/O */
+        rcu_sleep_ms(1);                      /* pretend: blocking I/O */
         rcu_qsbr_thread_online(g_qsv, id);
     }
 
@@ -139,8 +136,7 @@ static void *writer_thread(void *arg)
          * other useful work, which is the whole point of the design. */
         rcu_qsbr_dq_enqueue(g_dq, old);
 
-        struct timespec nap = { 0, 5 * 1000 * 1000 };  /* 5 ms */
-        nanosleep(&nap, NULL);
+        rcu_sleep_ms(5);
     }
     return NULL;
 }
@@ -188,18 +184,18 @@ int main(void)
            NUM_READERS, RUN_SECONDS);
 
     /* ---- 2. Launch reader + writer threads ----------------------- */
-    pthread_t readers[NUM_READERS], writer;
+    rcu_thread_t readers[NUM_READERS], writer;
     for (uint32_t i = 0; i < NUM_READERS; i++)
-        pthread_create(&readers[i], NULL, reader_thread,
-                       (void *)(uintptr_t)i);
-    pthread_create(&writer, NULL, writer_thread, NULL);
+        rcu_thread_create(&readers[i], reader_thread,
+                          (void *)(uintptr_t)i);
+    rcu_thread_create(&writer, writer_thread, NULL);
 
-    sleep(RUN_SECONDS);
+    rcu_sleep_ms(RUN_SECONDS * 1000);
     atomic_store_explicit(&g_quit, true, memory_order_release);
 
-    pthread_join(writer, NULL);
+    rcu_thread_join(writer);
     for (uint32_t i = 0; i < NUM_READERS; i++)
-        pthread_join(readers[i], NULL);
+        rcu_thread_join(readers[i]);
 
     /* ---- 3. Drain remaining deferred frees ----------------------- */
     uint32_t freed = 0, pending = 0;

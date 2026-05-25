@@ -31,7 +31,24 @@ cmake --build build
 
 Or run it as a test: `ctest --test-dir build`.
 
+### Windows (Visual Studio / MSVC)
+
+Builds out of the box — no pthreads package needed. `rcu_port.h`
+maps threading and sleep onto the native Win32 API on `_WIN32`, and
+onto pthreads everywhere else. The C11 `<stdatomic.h>` code is shared.
+
+```cmd
+cmake -S . -B build
+cmake --build build --config Release
+build\Release\rcu_demo.exe
+```
+
+MSVC needs Visual Studio 2022 17.5 or newer for C11 atomics; the
+CMake file passes `/experimental:c11atomics` automatically.
+
 ## Check for use-after-free
+
+GCC / Clang only:
 
 ```sh
 cmake -S . -B build-asan -DCMAKE_C_FLAGS="-fsanitize=address,undefined -g"
@@ -43,9 +60,10 @@ cmake --build build-asan
 
 ```
 include/rcu_qsbr.h   public API
+include/rcu_port.h   thread/sleep shim (pthreads or Win32)
 src/rcu_qsbr.c       QS variable + deferred-delete FIFO
 src/main.c           reader/writer demo
-CMakeLists.txt       build (C11, pthreads only)
+CMakeLists.txt       build (C11, pthreads or Win32)
 ```
 
 ## How it works
