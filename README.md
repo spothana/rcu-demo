@@ -4,6 +4,10 @@ A self-contained C implementation of **Quiescent State Based Reclamation**
 (QSBR) RCU, emulating the DPDK `rte_rcu_qsbr` library. It depends only on
 C11 `<stdatomic.h>` and POSIX threads — no DPDK.
 
+📊 **[View the animations →](docs/index.html)** — four interactive pages
+walking through the design, each paired with the matching source. Open
+[`docs/index.html`](docs/index.html) in a browser; no build step needed.
+
 ## What it shows
 
 A `config` object is shared lock-free between reader threads and one
@@ -63,8 +67,20 @@ include/rcu_qsbr.h   public API
 include/rcu_port.h   thread/sleep shim (pthreads or Win32)
 src/rcu_qsbr.c       QS variable + deferred-delete FIFO
 src/main.c           reader/writer demo
+docs/                standalone HTML animations of the design
 CMakeLists.txt       build (C11, pthreads or Win32)
 ```
+
+## Animations
+
+`docs/` holds four standalone HTML pages that visually explain the
+design, each paired with the matching source. Open `docs/index.html`
+in any browser — no server or build step needed.
+
+1. The quiescent state model — delete/free split by a grace period
+2. The QS variable and the token
+3. Reader online / offline (the blocking-call escape hatch)
+4. The deferred-delete FIFO
 
 ## How it works
 

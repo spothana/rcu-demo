@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RCU demo — animations</title>
+<link rel="stylesheet" href="rcu-anim.css">
+</head>
+<body>
+<div class="wrap">
+<header class="page">
+  <p class="eyebrow">rcu-demo</p>
+  <h1>RCU QSBR — visual walkthrough</h1>
+</header>
+
+<p>Four animations explaining the Quiescent State Based Reclamation (QSBR)
+RCU mechanism implemented in this repository. Each page pairs an
+animation with the matching code from <code>src/rcu_qsbr.c</code> and
+<code>src/main.c</code>. Every file is standalone HTML — open them
+directly, no server needed.</p>
+
+<div class="tiles">
+  <a class="tile" href="01-quiescent-state.html">
+    <span class="n">Animation 1</span>
+    <h3>The quiescent state model</h3>
+    <p>Delete and free split by a grace period; why a reader of a
+       different structure is not waited on.</p>
+  </a>
+  <a class="tile" href="02-qs-variable.html">
+    <span class="n">Animation 2</span>
+    <h3>The QS variable and the token</h3>
+    <p>Per-reader counter slots; the writer issues a token and polls
+       slots instead of talking to readers.</p>
+  </a>
+  <a class="tile" href="03-online-offline.html">
+    <span class="n">Animation 3</span>
+    <h3>Reader online and offline</h3>
+    <p>A reader drops offline before a blocking call so the writer's
+       check never stalls on it.</p>
+  </a>
+  <a class="tile" href="04-deferred-fifo.html">
+    <span class="n">Animation 4</span>
+    <h3>The deferred-delete FIFO</h3>
+    <p>Deleted pointers enqueued with a token, matured entries
+       reclaimed back to the allocator.</p>
+  </a>
+</div>
+
+<h2>How the animations map to the code</h2>
+<p>The walkthrough order matches the path a value takes through the
+library. Animation&nbsp;1 is the writer in <code>main.c</code> doing the
+two-step delete/free. Animation&nbsp;2 is <code>rcu_qsbr_start()</code>
+and <code>all_passed()</code> in <code>rcu_qsbr.c</code>.
+Animation&nbsp;3 is <code>rcu_qsbr_thread_offline()</code> and the
+reader-0 path in <code>main.c</code>. Animation&nbsp;4 is
+<code>rcu_qsbr_dq_enqueue()</code> and the reclaim pass.</p>
+
+<h2>Build the demo</h2>
+<figure class="code">
+  <figcaption>from the repository root</figcaption>
+<pre>cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+./build/rcu_demo
+</pre>
+</figure>
+<p>See <code>README.md</code> for the Windows/MSVC build and the
+AddressSanitizer check.</p>
+
+<div class="footer">rcu-demo · QSBR RCU with no DPDK dependency.</div>
+</div>
+</body>
+</html>

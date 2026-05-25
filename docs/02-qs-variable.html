@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2 · QS variable &amp; token — RCU demo</title>
+<link rel="stylesheet" href="rcu-anim.css">
+</head>
+<body>
+<div class="wrap">
+<header class="page">
+  <p class="eyebrow">RCU demo · animation 2 of 4</p>
+  <h1>The QS variable and the token</h1>
+</header>
+
+<nav class="nav">
+  <a href="index.html">Overview</a>
+  <a href="01-quiescent-state.html">1 · Quiescent state</a>
+  <a href="02-qs-variable.html" class="current">2 · QS variable</a>
+  <a href="03-online-offline.html">3 · Online / offline</a>
+  <a href="04-deferred-fifo.html">4 · Deferred FIFO</a>
+</nav>
+
+<p>The writer never talks to readers directly. It issues a <b>token</b> with
+<code>rcu_qsbr_start()</code>, then polls per-thread <b>slots</b> with
+<code>rcu_qsbr_check()</code>. A reader has passed token <i>T</i> once its
+slot counter reaches <i>T</i>.</p>
+
+<div class="card">
+  <div class="controls">
+    <button id="play"><span id="play-i">▶</span> <span id="play-t">Play</span></button>
+    <button id="step">Step ▸</button>
+    <button id="reset">↺ Reset</button>
+    <span class="phase-tag">Step <b id="pn">1</b> / 6</span>
+  </div>
+
+  <svg viewBox="0 0 680 410" xmlns="http://www.w3.org/2000/svg" role="img"
+       aria-label="QS variable with three reader slots, a token, and a writer">
+    <defs>
+      <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5"
+              markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke"
+              stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+    </defs>
+
+    <rect x="240" y="50" width="200" height="200" rx="14" fill="#eeedfe"
+          stroke="#534ab7" stroke-width="0.5"/>
+    <text x="340" y="74" text-anchor="middle" font-size="14"
+          font-weight="600" fill="#3c3489">QS variable</text>
+    <text x="340" y="90" text-anchor="middle" font-size="12"
+          fill="#534ab7">struct rcu_qsbr</text>
+
+    <rect id="tok" x="262" y="102" width="156" height="30" rx="6"
+          fill="#faeeda" stroke="#ba7517" stroke-width="0.5" opacity="0.35"/>
+    <text id="tok-t" x="340" y="121" text-anchor="middle" font-size="12"
+          fill="#854f0b" opacity="0.35">token: \u2014</text>
+
+    <g id="s0">
+      <rect x="262" y="142" width="156" height="28" rx="6" fill="#f1efe8"
+            stroke="#888780" stroke-width="0.5"/>
+      <text x="270" y="160" font-size="12" fill="#5f5e5a">slot[0]</text>
+      <text id="s0v" x="410" y="160" text-anchor="end" font-size="12"
+            fill="#5f5e5a">unregistered</text>
+    </g>
+    <g id="s1">
+      <rect x="262" y="176" width="156" height="28" rx="6" fill="#f1efe8"
+            stroke="#888780" stroke-width="0.5"/>
+      <text x="270" y="194" font-size="12" fill="#5f5e5a">slot[1]</text>
+      <text id="s1v" x="410" y="194" text-anchor="end" font-size="12"
+            fill="#5f5e5a">unregistered</text>
+    </g>
+    <g id="s2">
+      <rect x="262" y="210" width="156" height="28" rx="6" fill="#f1efe8"
+            stroke="#888780" stroke-width="0.5"/>
+      <text x="270" y="228" font-size="12" fill="#5f5e5a">slot[2]</text>
+      <text id="s2v" x="410" y="228" text-anchor="end" font-size="12"
+            fill="#5f5e5a">unregistered</text>
+    </g>
+
+    <text x="40" y="120" font-size="14" font-weight="600">Reader 0</text>
+    <text x="40" y="190" font-size="14" font-weight="600">Reader 1</text>
+    <text x="40" y="260" font-size="14" font-weight="600">Reader 2</text>
+    <text id="r0s" x="40" y="136" font-size="12" fill="#888780">idle</text>
+    <text id="r1s" x="40" y="206" font-size="12" fill="#888780">idle</text>
+    <text id="r2s" x="40" y="276" font-size="12" fill="#888780">idle</text>
+
+    <line id="rl0" x1="150" y1="156" x2="256" y2="156" stroke="#534ab7"
+          stroke-width="1" stroke-dasharray="4 3" opacity="0" marker-end="url(#ar)"/>
+    <line id="rl1" x1="150" y1="190" x2="256" y2="190" stroke="#534ab7"
+          stroke-width="1" stroke-dasharray="4 3" opacity="0" marker-end="url(#ar)"/>
+    <line id="rl2" x1="150" y1="224" x2="256" y2="224" stroke="#534ab7"
+          stroke-width="1" stroke-dasharray="4 3" opacity="0" marker-end="url(#ar)"/>
+
+    <text x="640" y="120" text-anchor="end" font-size="14"
+          font-weight="600">Writer</text>
+    <text id="ws" x="640" y="136" text-anchor="end" font-size="12"
+          fill="#888780">idle</text>
+    <line id="wl" x1="540" y1="127" x2="446" y2="127" stroke="#ba7517"
+          stroke-width="1" stroke-dasharray="4 3" opacity="0" marker-end="url(#ar)"/>
+
+    <rect id="vd" x="190" y="282" width="300" height="40" rx="8"
+          fill="#faece7" stroke="#d85a30" stroke-width="0.5" opacity="0"/>
+    <text id="vd-t" x="340" y="306" text-anchor="middle" font-size="12"
+          font-weight="500" fill="#993c1d" opacity="0">waiting</text>
+
+    <text id="cap" x="340" y="362" text-anchor="middle" font-size="13"
+          font-weight="500" fill="#5f5e5a">
+      The application sizes and initializes the QS variable.</text>
+  </svg>
+</div>
+
+<h2>The matching code</h2>
+<p>The QS variable is one global token plus a counter slot per reader.
+<code>rcu_qsbr_start()</code> bumps the token; <code>all_passed()</code>
+decides when the grace period is over.</p>
+
+<figure class="code">
+  <figcaption>src/rcu_qsbr.c — start() and the check predicate</figcaption>
+<pre><span class="kw">uint64_t</span> <span class="fn">rcu_qsbr_start</span>(<span class="kw">struct</span> rcu_qsbr *v)
+{
+    <span class="cm">/* Hand out a fresh token; lock-free for many writers. */</span>
+    <span class="kw">return</span> <span class="fn">atomic_fetch_add_explicit</span>(&v-&gt;token, 1,
+                                     memory_order_acq_rel) + 1;
+}
+
+<span class="cm">/* Has every registered, online reader reached `token`? */</span>
+<span class="kw">static</span> <span class="kw">bool</span> <span class="fn">all_passed</span>(<span class="kw">struct</span> rcu_qsbr *v, <span class="kw">uint64_t</span> token)
+{
+    <span class="kw">for</span> (<span class="kw">uint32_t</span> i = 0; i &lt; v-&gt;max_threads; i++) {
+        <span class="kw">if</span> (!<span class="fn">atomic_load_explicit</span>(&v-&gt;slots[i].registered, ...))
+            <span class="kw">continue</span>;                 <span class="cm">/* slot not in use   */</span>
+        <span class="kw">uint64_t</span> c = <span class="fn">atomic_load_explicit</span>(&v-&gt;slots[i].cnt, ...);
+        <span class="kw">if</span> (c == CNT_OFFLINE) <span class="kw">continue</span>;  <span class="cm">/* skipped, see #3   */</span>
+        <span class="kw">if</span> (c &lt; token) <span class="kw">return</span> <span class="kw">false</span>;     <span class="cm">/* still in old c.s. */</span>
+    }
+    <span class="kw">return</span> <span class="kw">true</span>;
+}
+</pre>
+</figure>
+
+<div class="footer">RCU demo · open <code>docs/index.html</code> for all four animations.</div>
+</div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function slot(g, fill, stroke, val) {
+    var r = $(g).querySelector("rect");
+    r.setAttribute("fill", fill); r.setAttribute("stroke", stroke);
+    $(g.replace("s", "s") + "v") && 0;
+  }
+  function paint(n, fill, stroke, tx, val) {
+    var r = $("s" + n).querySelector("rect");
+    r.setAttribute("fill", fill); r.setAttribute("stroke", stroke);
+    var t = $("s" + n + "v");
+    t.setAttribute("fill", tx); t.textContent = val;
+  }
+  function txt(id, v) { $(id).textContent = v; }
+  function op(id, v) { $(id).style.opacity = v; }
+
+  var phases = [
+    function () {
+      paint(0, "#f1efe8", "#888780", "#5f5e5a", "unregistered");
+      paint(1, "#f1efe8", "#888780", "#5f5e5a", "unregistered");
+      paint(2, "#f1efe8", "#888780", "#5f5e5a", "unregistered");
+      ["rl0","rl1","rl2","wl","vd","vd-t"].forEach(function (x) { op(x, 0); });
+      op("tok", 0.35); op("tok-t", 0.35); txt("tok-t", "token: \u2014");
+      txt("r0s", "idle"); txt("r1s", "idle"); txt("r2s", "idle");
+      txt("ws", "idle");
+      txt("cap", "rcu_qsbr_get_memsize() sizes it; rcu_qsbr_init() zeroes the slots.");
+    },
+    function () {
+      paint(0, "#e6f1fb", "#378add", "#0c447c", "registered, offline");
+      paint(1, "#e6f1fb", "#378add", "#0c447c", "registered, offline");
+      paint(2, "#e6f1fb", "#378add", "#0c447c", "registered, offline");
+      ["rl0","rl1","rl2"].forEach(function (x) { op(x, 0.8); });
+      txt("r0s", "registered"); txt("r1s", "registered"); txt("r2s", "registered");
+      txt("cap", "Each reader calls rcu_qsbr_thread_register() with its unique id.");
+    },
+    function () {
+      paint(0, "#e6f1fb", "#378add", "#0c447c", "online \u00b7 cnt 2");
+      paint(1, "#e6f1fb", "#378add", "#0c447c", "online \u00b7 cnt 2");
+      paint(2, "#e6f1fb", "#378add", "#0c447c", "online \u00b7 cnt 2");
+      txt("r0s", "online"); txt("r1s", "online"); txt("r2s", "online");
+      txt("cap", "rcu_qsbr_thread_online() adopts the current token; readers start reporting.");
+    },
+    function () {
+      op("wl", 0.85); txt("ws", "rcu_qsbr_start()");
+      op("tok", 1); op("tok-t", 1); txt("tok-t", "token: 3  (issued)");
+      op("vd", 1); op("vd-t", 1);
+      $("vd").setAttribute("fill", "#faeeda");
+      $("vd").setAttribute("stroke", "#ba7517");
+      $("vd-t").setAttribute("fill", "#854f0b");
+      txt("vd-t", "check(token=3) \u2192 no reader has reached 3");
+      txt("cap", "The writer calls rcu_qsbr_start() and gets token = 3.");
+    },
+    function () {
+      paint(0, "#e1f5ee", "#1d9e75", "#0f6e56", "online \u00b7 cnt 3");
+      paint(2, "#e1f5ee", "#1d9e75", "#0f6e56", "online \u00b7 cnt 3");
+      txt("r0s", "hit quiescent"); txt("r2s", "hit quiescent");
+      txt("ws", "does other work");
+      txt("vd-t", "check(token=3) \u2192 slot[1] still pending");
+      txt("cap", "Readers 0 and 2 call rcu_qsbr_quiescent(); their slots advance to 3.");
+    },
+    function () {
+      paint(1, "#e1f5ee", "#1d9e75", "#0f6e56", "online \u00b7 cnt 3");
+      txt("r1s", "hit quiescent");
+      txt("ws", "rcu_qsbr_check()");
+      $("vd").setAttribute("fill", "#e1f5ee");
+      $("vd").setAttribute("stroke", "#1d9e75");
+      $("vd-t").setAttribute("fill", "#0f6e56");
+      txt("vd-t", "check(token=3) \u2192 all slots \u2265 3: safe to free");
+      txt("cap", "Once every slot reaches the token, rcu_qsbr_check() returns 1.");
+    }
+  ];
+  var i = 0, timer = null;
+  function render() { phases[i](); $("pn").textContent = i + 1; }
+  function stop() {
+    if (timer) { clearInterval(timer); timer = null; }
+    $("play-i").textContent = "\u25b6"; $("play-t").textContent = "Play";
+  }
+  function next() { i = (i + 1) % phases.length; render(); if (i === phases.length - 1) stop(); }
+  $("play").onclick = function () {
+    if (timer) { stop(); return; }
+    if (i === phases.length - 1) { i = 0; render(); }
+    $("play-i").textContent = "\u2759\u2759"; $("play-t").textContent = "Pause";
+    timer = setInterval(next, 2300);
+  };
+  $("step").onclick = function () { stop(); next(); };
+  $("reset").onclick = function () { stop(); i = 0; render(); };
+  render();
+})();
+</script>
+</body>
+</html>
